@@ -1,0 +1,2 @@
+# Neurona-
+Treball IA 
