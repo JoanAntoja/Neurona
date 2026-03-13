@@ -401,6 +401,44 @@
       text-decoration: none;
     }
 
+    /* ─── COPY BUTTON ────────────────────────────────────── */
+    .btn-copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 14px;
+      padding: 6px 12px;
+      border: 1px solid rgba(13,18,32,.15);
+      border-radius: 20px;
+      background: var(--surface);
+      color: var(--ink-3);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .btn-copy:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .btn-copy.copied { background: #22c27a; color: #fff; border-color: #22c27a; }
+    .copy-icon { font-size: 13px; }
+
+    /* ─── TEMA BADGE ─────────────────────────────────────── */
+    .tema-badge {
+      font-size: 10.5px;
+      font-weight: 500;
+      background: var(--surface);
+      color: var(--accent-a);
+      border: 1px solid var(--border-data);
+      border-radius: 20px;
+      padding: 2px 10px;
+      white-space: nowrap;
+      animation: fade-in .3s ease;
+    }
+    @keyframes fade-in {
+      from { opacity: 0; transform: scale(.9); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
     /* ─── DESKTOP CHROME ─────────────────────────────────── */
     @media (min-width: 520px) {
       body { padding: 32px 16px 60px; align-items: flex-start; }
@@ -518,69 +556,187 @@
 </div>
 
 <script>
-  /* ── Char counter ────────────────────────────────── */
+  /* ════════════════════════════════════════════════════
+     BASE DE DADES DE TEMES
+  ════════════════════════════════════════════════════ */
+  const baseDeDades = {
+
+    immigració: {
+      paraules: ['immigració','immigrant','immigrants','immigrat','immigrats','refugiat','refugiats','migrant','migrants','fronteres','frontera','deportació','il·legal','il·legals','migració','asil'],
+      data: `Els estudis demogràfics mostren que la immigració neta té un impacte <strong>positiu en el PIB</strong> a llarg termini (FMI, 2023). Les narratives que associen immigració amb criminalitat no troben suport en dades: les taxes delictives no correlacionen amb nivells d'immigració. Fonts com Eurostat i l'OIM desmunten molts dels arguments numèrics usats en bulos sobre aquest tema.`,
+      empath: `Entenc que els missatges sobre immigració sovint generen inseguretat o preocupació. Aquestes emocions són legítimes. El problema és que la por és fàcilment explotable per a la desinformació. Quan un missatge et fa sentir amenaçat de manera molt intensa i immediata, és el moment de fer una pausa i buscar context real abans de compartir-lo.`,
+      pedag: `Els bulos sobre immigració solen usar l'estratègia de la <em>«generalització falsa»</em>: prenen un cas aïllat i el presenten com a norma. Per combatre-ho: (1) Busca la font original de les dades. (2) Comprova si organitzacions com ACNUR o Eurostat contradiuen l'afirmació. (3) Aplica el principi: "Un cas no és una estadística".`
+    },
+
+    vacunes: {
+      paraules: ['vacuna','vacunes','vacunat','vacunació','vaccine','pfizer','moderna','astrazeneca','covid','sars','mrna','immunització','antivacuna','efectes secundaris'],
+      data: `L'eficàcia i seguretat de les vacunes està avalada per <strong>dècades d'evidència científica revisada per parells</strong>. L'OMS i el CDC monitoritzen contínuament efectes adversos. L'estudi fraudulent que suposadament vinculava vacunes amb autisme va ser retirat i el seu autor, inhabilitat. La taxa de greus efectes adversos és estadísticament inferior als riscos de les malalties que prevenen.`,
+      empath: `El dubte sobre les vacunes sovint neix d'una preocupació molt humana: voler protegir la família. Ningú que es pregunti sobre seguretat mèdica és "ignorant". El problema apareix quan fonts no fiables es presenten amb l'aparença de ciència oficial. Pots expressar dubtes al teu metge: és el millor canal per a preguntes reals sobre salut.`,
+      pedag: `Per avaluar informació sobre vacunes: (1) Comprova si la font és una revista científica amb revisió per parells (PubMed, Lancet, NEJM). (2) Desconfia de fonts que usen termes com "el que no et diuen" o "veritat ocultada". (3) Consulta el <em>Vaccine Safety Net</em> de l'OMS. (4) Recorda: correlació no implica causalitat.`
+    },
+
+    clima: {
+      paraules: ['clima','canvi climàtic','escalfament','CO2','emissions','carboni','temperatura','efecte hivernacle','glacier','gelera','inundació','sequera','renovables','fòssil','petroli','paris','ipcc'],
+      data: `El <strong>97% dels científics climàtics</strong> coincideixen: l'escalfament global actual és d'origen humà (NASA, IPCC AR6, 2021). La temperatura global ha pujat ~1,1°C des de l'era preindustrial. Les dades de CO₂ atmosfèric (ara a 420 ppm) no han estat tan altes en 800.000 anys, segons nuclis de gel antàrtics. Els bulos solen descontextualitzar dades locals per negar tendències globals.`,
+      empath: `L'ansietat climàtica és real i comprensible. Alhora, la desinformació sobre el clima causa bloqueig: si tot sembla incert o contradictori, és difícil actuar. Quan un missatge et genera confusió sobre si el canvi climàtic existeix, recorda que el dubte sistemàtic és precisament el que algunes indústries han finançat durant dècades per aturar l'acció.`,
+      pedag: `Estratègia clàssica de negacionisme climàtic: el <em>«fals debat»</em>, fent semblar que hi ha una controvèrsia científica real quan no n'hi ha. Per detectar-ho: (1) Mira qui finança l'estudi. (2) Comprova si l'autor és expert en climatologia o en una altra àrea. (3) Consulta directament el portal de l'IPCC o NASA Climate. (4) "El temps local" ≠ "clima global".`
+    },
+
+    economia: {
+      paraules: ['economia','inflació','preu','preus','deute','deute públic','pib','atur','feina','treball','impost','impostos','pensió','pensions','euro','dòlar','borsa','crisi','recessió','mercat','pobresa','riquesa'],
+      data: `Les afirmacions econòmiques en bulos solen usar <strong>dades reals fora de context temporal o comparatiu</strong>. Per exemple, el deute públic expressat en valor absolut omete la relació deute/PIB i el context internacional. Fonts fiables: Eurostat, Banc d'Espanya, FMI, OCDE. Recorda que un gràfic sense eixos clarament etiquetats és una senyera vermella.`,
+      empath: `La incertesa econòmica genera angoixa real, i els missatges que semblen explicar "qui té la culpa" poden ser reconfortants. Però sovint aquestes explicacions simples oculten la complexitat real i assenyalen bocs expiatoris. Prendre decisions importants (polítiques, financeres) basant-se en desinformació econòmica pot tenir conseqüències concretes per a tu i la teva família.`,
+      pedag: `Per analitzar afirmacions econòmiques: (1) Demana la font de les dades i l'any. (2) Compara amb països similars, no aïlladament. (3) Desconfia de correlacions presentades com a causalitats ("els immigrants baixen els salaris" ignora desenes de variables). (4) El recurs <em>Our World in Data</em> (ourworldindata.org) ofereix dades contextualitzades i visualitzades honestament.`
+    },
+
+    gènere: {
+      paraules: ['gènere','feminisme','feminista','igualtat','LGTBI','LGTBIQ','trans','transgènere','avortament','violència de gènere','masclisme','patriarcat','ideologia de gènere','identitat sexual','orientació','homosexual','bisexual'],
+      data: `La <strong>bretxa salarial de gènere és documentada estadísticament</strong> per Eurostat (en mitjana, les dones cobren un 13% menys per hora a la UE). La violència de gènere és reconeguda com a problema de salut pública per l'OMS. El terme "ideologia de gènere" no té base científica; és una construcció política. La investigació en biologia, psicologia i sociologia dona suport a la diversitat d'identitats de gènere.`,
+      empath: `Els debats sobre gènere sovint venen carregats d'emocions molt fortes, en totes direccions. Si has rebut un missatge que et genera confusió o indignació sobre aquest tema, és bo recordar que les persones afectades per aquestes realitats (dones, persones LGTBIQ+) no són abstraccions: les dades i les polítiques sobre gènere afecten vides reals. Considera com et sentiries si fossis la persona de qui es parla.`,
+      pedag: `Els bulos sobre gènere solen usar la tàctica de la <em>«fal·làcia del pendent relliscós»</em>: "si acceptem X, llavors inevitablement passarà Y" sense cap prova. Per identificar-ho: (1) Busca estudis revisats per parells sobre la premissa concreta. (2) Distingeix entre opinió moral i evidència empírica. (3) Consulta fonts com l'OMS, ACNUR o Amnistia Internacional en lloc de llocs activistes anònims.`
+    }
+  };
+
+  /* ════════════════════════════════════════════════════
+     RESPOSTA GENÈRICA (fallback)
+  ════════════════════════════════════════════════════ */
+  const respostaGenerica = {
+    data: `No he detectat un tema específic, però el missatge presenta patrons comuns de desinformació: <strong>manca de fonts verificables</strong>, ús de llenguatge d'urgència («comparteix ara», «t'ho ocultaven») i afirmacions absolutistes sense matisos. Abans de compartir qualsevol contingut, verifica'l a Maldita.es, Newtral o AFP Factual.`,
+    empath: `Entenc que rebre missatges alarmants o sorprenents genera una reacció emocional forta, i és natural voler compartir-los per avisar als teus éssers estimats. Precisament aquesta urgència emocional és el que exploten els creadors de bulos. Fes una pausa de 5 minuts i pregunta't: "Per què em fa sentir exactament això? Qui se'n beneficia si ho comparteixo?"`,
+    pedag: `Aplica el mètode <strong>SIFT</strong> a qualsevol missatge sospitós: <em>Stop</em> — para i no comparteixis immediatament. <em>Investigate</em> — investiga la font original. <em>Find better coverage</em> — busca si altres fonts fiables ho confirmen. <em>Trace claims</em> — rastreja l'afirmació fins al seu origen. Si no trobes la font original, això ja és una senyera vermella important.`
+  };
+
+  /* ════════════════════════════════════════════════════
+     MOTOR D'ANÀLISI
+  ════════════════════════════════════════════════════ */
+  function detectarTema(text) {
+    const textNorm = text.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // treure accents per a la cerca
+
+    for (const [tema, dades] of Object.entries(baseDeDades)) {
+      for (const paraula of dades.paraules) {
+        const paraulaNorm = paraula.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (textNorm.includes(paraulaNorm)) {
+          return { tema, dades };
+        }
+      }
+    }
+    return null; // cap tema trobat → fallback
+  }
+
+  /* ════════════════════════════════════════════════════
+     UI: COMPTADOR DE CARÀCTERS
+  ════════════════════════════════════════════════════ */
   function updateCount(el) {
     document.getElementById('charCount').textContent =
       el.value.length + ' / ' + el.maxLength;
   }
 
-  /* ── Simulate analysis ───────────────────────────── */
+  /* ════════════════════════════════════════════════════
+     UI: ANALITZAR
+  ════════════════════════════════════════════════════ */
   async function analyze() {
-    const input  = document.getElementById('msgInput');
-    const btn    = document.getElementById('btnAnalyze');
-    const res    = document.getElementById('results');
-    const div    = document.getElementById('divider');
+    const input = document.getElementById('msgInput');
+    const btn   = document.getElementById('btnAnalyze');
+    const res   = document.getElementById('results');
+    const div   = document.getElementById('divider');
 
     if (!input.value.trim()) {
       input.focus();
       input.style.borderColor = '#f43a3a';
-      setTimeout(() => input.style.borderColor = '', 1200);
+      setTimeout(() => input.style.borderColor = '', 1400);
       return;
     }
 
-    // Loading state
     btn.disabled = true;
     btn.classList.add('loading');
 
-    // Show skeletons
     setSkeletons();
     div.style.display = 'flex';
     res.classList.add('visible');
 
-    // Simulate API delay
-    await delay(1800);
+    await delay(1600);
 
-    // Fill with mock results
-    fillResults(input.value.trim());
+    const resultat = detectarTema(input.value.trim());
+    if (resultat) {
+      const { tema, dades } = resultat;
+      omplirResultats(dades.data, dades.empath, dades.pedag, tema);
+    } else {
+      omplirResultats(respostaGenerica.data, respostaGenerica.empath, respostaGenerica.pedag, null);
+    }
 
     btn.disabled = false;
     btn.classList.remove('loading');
   }
 
+  /* ════════════════════════════════════════════════════
+     UI: HELPERS
+  ════════════════════════════════════════════════════ */
   function setSkeletons() {
     ['data','empath','pedag'].forEach(id => {
       document.getElementById('body-' + id).innerHTML =
         '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
     });
+    // Amaga badges de tema si existien
+    document.querySelectorAll('.tema-badge').forEach(b => b.remove());
   }
 
-  function fillResults(msg) {
-    const samples = {
-      data: `Aquest missatge conté característiques associades a contingut desinformatiu: manca de fonts verificables, ús de llenguatge d'urgència i afirmacions no contrastades. La probabilitat de ser bulo és <strong>alta</strong> segons patrons estadístics.`,
-      empath: `Entenc que rebre aquest tipus de missatge pot generar confusió o por. És natural sentir-se desconcertat. T'acompanyo a analitzar-ho junts: recorda que les emocions forts que provoca un text sovint és la primera alarma d'una manipulació.`,
-      pedag: `Per detectar desinformació, aplica el mètode SIFT: <em>Stop</em> (para), <em>Investigate</em> (investiga la font), <em>Find better coverage</em> (cerca més fonts), <em>Trace claims</em> (rastreja l'origen). En aquest cas, cap font fiable confirma el contingut.`
-    };
+  function omplirResultats(txtData, txtEmpath, txtPedag, tema) {
+    document.getElementById('body-data').innerHTML   = txtData   + copyBtn('data');
+    document.getElementById('body-empath').innerHTML = txtEmpath + copyBtn('empath');
+    document.getElementById('body-pedag').innerHTML  = txtPedag  + copyBtn('pedag');
 
-    ['data','empath','pedag'].forEach(id => {
-      document.getElementById('body-' + id).innerHTML = samples[id];
-    });
+    // Badge de tema detectat al divider
+    const div = document.getElementById('divider');
+    const badgeExistent = div.querySelector('.tema-badge');
+    if (badgeExistent) badgeExistent.remove();
+    if (tema) {
+      const badge = document.createElement('span');
+      badge.className = 'tema-badge';
+      badge.textContent = '🏷 ' + tema.charAt(0).toUpperCase() + tema.slice(1);
+      div.appendChild(badge);
+    }
   }
 
-  function delay(ms) {
-    return new Promise(r => setTimeout(r, ms));
+  function copyBtn(id) {
+    return `<button class="btn-copy" onclick="copiarText('body-${id}', this)" title="Copiar resposta">
+      <span class="copy-icon">⧉</span><span class="copy-label">Copiar</span>
+    </button>`;
   }
 
-  /* ── Enter shortcut ──────────────────────────────── */
+  async function copiarText(bodyId, btn) {
+    const el = document.getElementById(bodyId);
+    // Agafa text sense el botó de copiar
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.btn-copy').forEach(b => b.remove());
+    const text = clone.innerText || clone.textContent;
+
+    try {
+      await navigator.clipboard.writeText(text.trim());
+      btn.classList.add('copied');
+      btn.querySelector('.copy-label').textContent = 'Copiat!';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.querySelector('.copy-label').textContent = 'Copiar';
+      }, 2000);
+    } catch {
+      // Fallback per a entorns sense clipboard API
+      const ta = document.createElement('textarea');
+      ta.value = text.trim();
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      btn.querySelector('.copy-label').textContent = 'Copiat!';
+      setTimeout(() => btn.querySelector('.copy-label').textContent = 'Copiar', 2000);
+    }
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  /* ── Drecera de teclat ───────────────────────────── */
   document.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') analyze();
   });
