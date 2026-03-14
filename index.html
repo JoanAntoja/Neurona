@@ -101,33 +101,29 @@
       <div class="gauge-panel">
         <div class="gauge-label-top">ÍNDEX DE FIABILITAT</div>
         <svg class="gauge-svg" viewBox="0 0 300 165" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <!-- Track -->
+          <!-- Track fosc (fons) — única barra de fons -->
           <path d="M 30,140 A 120,120 0 0 1 270,140" stroke="#1a1f30" stroke-width="14" stroke-linecap="round" fill="none"/>
-          <!-- Zone colors (decorative) -->
-          <path d="M 30,140 A 120,120 0 0 1 95,34"  stroke="rgba(248,113,113,.15)" stroke-width="14" stroke-linecap="round" fill="none"/>
-          <path d="M 95,34 A 120,120 0 0 1 222,34"  stroke="rgba(251,191,36,.12)"  stroke-width="14" stroke-linecap="round" fill="none"/>
-          <path d="M 222,34 A 120,120 0 0 1 270,140" stroke="rgba(16,217,138,.12)"  stroke-width="14" stroke-linecap="round" fill="none"/>
-          <!-- Fill arc (JS controlled) -->
+          <!-- Arc de resultat (JS controla color i longitud) -->
           <path id="gaugeFill"
             d="M 30,140 A 120,120 0 0 1 270,140"
             stroke="#22d3ee" stroke-width="14" stroke-linecap="round" fill="none"
             stroke-dasharray="376.99" stroke-dashoffset="376.99"
             style="transition: stroke-dashoffset 1s cubic-bezier(.4,0,.2,1), stroke .5s ease"/>
-          <!-- Tick marks -->
+          <!-- Ticks dels extrems -->
           <line x1="26"  y1="140" x2="18"  y2="140" stroke="#2e3650" stroke-width="1.5"/>
           <line x1="274" y1="140" x2="282" y2="140" stroke="#2e3650" stroke-width="1.5"/>
-          <!-- Needle (JS controlled) -->
+          <!-- Agulla (JS controla posició) -->
           <line id="gaugeNeedle"
             x1="150" y1="140" x2="60" y2="140"
             stroke="#c8d0e8" stroke-width="2" stroke-linecap="round"
             style="transform-origin: 150px 140px; transition: all 1s cubic-bezier(.4,0,.2,1)"/>
-          <!-- Center dot -->
+          <!-- Punt central -->
           <circle cx="150" cy="140" r="5" fill="#0f1320" stroke="#22d3ee" stroke-width="1.5"/>
-          <!-- Labels -->
+          <!-- Etiquetes numèriques -->
           <text x="22"  y="157" font-family="Share Tech Mono" font-size="9" fill="#3d4560">0</text>
           <text x="268" y="157" font-family="Share Tech Mono" font-size="9" fill="#3d4560">100</text>
-          <text x="84"  y="27"  font-family="Share Tech Mono" font-size="9" fill="#5a4040">30</text>
-          <text x="203" y="27"  font-family="Share Tech Mono" font-size="9" fill="#405a40">70</text>
+          <text x="84"  y="27"  font-family="Share Tech Mono" font-size="9" fill="#3d4560">30</text>
+          <text x="203" y="27"  font-family="Share Tech Mono" font-size="9" fill="#3d4560">70</text>
         </svg>
         <div class="gauge-score-wrap">
           <span class="score-val" id="scoreVal" style="color:var(--cyan)">--</span>
@@ -182,7 +178,7 @@
 
       <!-- Descarregar Informe -->
       <button class="btn-download" onclick="descarregarInforme()">
-        📥 DESCARREGAR INFORME (.html)
+        📥 DESCARREGAR INFORME FORENSE (.html)
       </button>
 
     </div><!-- /dashboard -->
