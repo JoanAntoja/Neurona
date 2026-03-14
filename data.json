@@ -285,6 +285,12 @@
           "w": "depopulation",
           "s": 10
         }
+      ],
+      "fonts_fiables": [
+        "bellingcat.com",
+        "rand.org",
+        "firstdraftnews.com",
+        "isdglobal.org"
       ]
     },
     {
@@ -518,6 +524,12 @@
           "w": "grafeno vacuna",
           "s": 9
         }
+      ],
+      "fonts_fiables": [
+        "who.int",
+        "ema.europa.eu",
+        "pubmed.ncbi.nlm.nih.gov",
+        "cochranelibrary.com"
       ]
     },
     {
@@ -707,6 +719,12 @@
           "w": "oms menteix",
           "s": 8
         }
+      ],
+      "fonts_fiables": [
+        "ecdc.europa.eu",
+        "who.int",
+        "coronavirus.jhu.edu",
+        "msf.es"
       ]
     },
     {
@@ -860,6 +878,12 @@
           "w": "satèlit vigilància",
           "s": 7
         }
+      ],
+      "fonts_fiables": [
+        "who.int",
+        "icnirp.org",
+        "gsma.com",
+        "itu.int"
       ]
     },
     {
@@ -1041,6 +1065,12 @@
           "w": "activisme pagat",
           "s": 7
         }
+      ],
+      "fonts_fiables": [
+        "ipcc.ch",
+        "climate.nasa.gov",
+        "noaa.gov",
+        "copernicus.eu"
       ]
     },
     {
@@ -1258,6 +1288,12 @@
           "w": "repatriación masiva",
           "s": 7
         }
+      ],
+      "fonts_fiables": [
+        "acnur.org",
+        "iom.int",
+        "ec.europa.eu/eurostat",
+        "ine.es"
       ]
     },
     {
@@ -1527,6 +1563,12 @@
           "w": "hiperinflación",
           "s": 6
         }
+      ],
+      "fonts_fiables": [
+        "ecb.europa.eu",
+        "imf.org",
+        "ec.europa.eu/eurostat",
+        "bde.es"
       ]
     },
     {
@@ -1764,6 +1806,12 @@
           "w": "dióxido cloro",
           "s": 10
         }
+      ],
+      "fonts_fiables": [
+        "who.int",
+        "cdc.gov",
+        "cochranelibrary.com",
+        "mscbs.gob.es"
       ]
     },
     {
@@ -1953,6 +2001,12 @@
           "w": "atac ddos",
           "s": 7
         }
+      ],
+      "fonts_fiables": [
+        "incibe.es",
+        "ccn-cert.cni.es",
+        "enisa.europa.eu",
+        "cisa.gov"
       ]
     },
     {
@@ -2142,6 +2196,12 @@
           "w": "front de guerra",
           "s": 5
         }
+      ],
+      "fonts_fiables": [
+        "occrp.org",
+        "bellingcat.com",
+        "reuters.com",
+        "apnews.com"
       ]
     },
     {
@@ -2295,6 +2355,12 @@
           "w": "reconocimiento facial control",
           "s": 8
         }
+      ],
+      "fonts_fiables": [
+        "technologyreview.com",
+        "ieee.org",
+        "arxiv.org",
+        "eff.org"
       ]
     },
     {
@@ -2444,6 +2510,12 @@
           "w": "moneda digital control",
           "s": 8
         }
+      ],
+      "fonts_fiables": [
+        "sec.gov",
+        "cnmv.es",
+        "coindesk.com",
+        "chainalysis.com"
       ]
     },
     {
@@ -2593,6 +2665,12 @@
           "w": "guerra cibernètica",
           "s": 6
         }
+      ],
+      "fonts_fiables": [
+        "eff.org",
+        "accessnow.org",
+        "cpj.org",
+        "citizenlab.ca"
       ]
     },
     {
@@ -2762,6 +2840,12 @@
           "w": "perversió sexual",
           "s": 7
         }
+      ],
+      "fonts_fiables": [
+        "who.int",
+        "ec.europa.eu/eurostat",
+        "unwomen.org",
+        "ilga.org"
       ]
     },
     {
@@ -2926,6 +3010,12 @@
           "w": "censura política",
           "s": 7
         }
+      ],
+      "fonts_fiables": [
+        "maldita.es",
+        "newtral.es",
+        "verificat.cat",
+        "afpfactual.com"
       ]
     },
     {
@@ -3063,6 +3153,12 @@
           "w": "pastillas control",
           "s": 8
         }
+      ],
+      "fonts_fiables": [
+        "who.int",
+        "psychiatry.org",
+        "nimh.nih.gov",
+        "telefonodelaesperanza.org"
       ]
     },
     {
@@ -3228,6 +3324,12 @@
           "w": "dejuni cura",
           "s": 6
         }
+      ],
+      "fonts_fiables": [
+        "efsa.europa.eu",
+        "aesan.gob.es",
+        "who.int",
+        "hsph.harvard.edu"
       ]
     },
     {
@@ -3372,6 +3474,12 @@
           "w": "sexualidad menores",
           "s": 6
         }
+      ],
+      "fonts_fiables": [
+        "pisa.oecd.org",
+        "educacionyfp.gob.es",
+        "consellescolar.gencat.cat",
+        "mec.gob.es"
       ]
     },
     {
@@ -3516,6 +3624,12 @@
           "w": "periodista a sueldo",
           "s": 8
         }
+      ],
+      "fonts_fiables": [
+        "ifcncodeofprinciples.poynter.org",
+        "rsf.org",
+        "reutersinstitute.politics.ox.ac.uk",
+        "poynter.org"
       ]
     },
     {
@@ -3637,6 +3751,12 @@
           "w": "aire contaminat intencionalment",
           "s": 8
         }
+      ],
+      "fonts_fiables": [
+        "wwf.org",
+        "iucn.org",
+        "unep.org",
+        "greenpeace.org"
       ]
     },
     {
@@ -3837,6 +3957,12 @@
           "w": "desprotegits",
           "s": 7
         }
+      ],
+      "fonts_fiables": [
+        "firstdraftnews.com",
+        "rand.org",
+        "reutersinstitute.politics.ox.ac.uk",
+        "poynter.org"
       ]
     },
     {
@@ -4013,6 +4139,12 @@
           "w": "el tiempo se agota",
           "s": 8
         }
+      ],
+      "fonts_fiables": [
+        "maldita.es",
+        "newtral.es",
+        "verificat.cat",
+        "poynter.org"
       ]
     },
     {
@@ -4209,6 +4341,12 @@
           "w": "epigenética cura",
           "s": 9
         }
+      ],
+      "fonts_fiables": [
+        "cochranelibrary.com",
+        "pubmed.ncbi.nlm.nih.gov",
+        "sciencebasedmedicine.org",
+        "quackwatch.org"
       ]
     },
     {
@@ -4433,6 +4571,12 @@
           "w": "profesores adoctrinadores",
           "s": 9
         }
+      ],
+      "fonts_fiables": [
+        "rand.org",
+        "reutersinstitute.politics.ox.ac.uk",
+        "isdglobal.org",
+        "euvsdisinfo.eu"
       ]
     },
     {
@@ -4621,6 +4765,12 @@
           "w": "fuente anónima confirma",
           "s": 8
         }
+      ],
+      "fonts_fiables": [
+        "euvsdisinfo.eu",
+        "firstdraftnews.com",
+        "bellingcat.com",
+        "maldita.es"
       ]
     },
     {
@@ -4774,6 +4924,12 @@
           "w": "11s conspiración",
           "s": 10
         }
+      ],
+      "fonts_fiables": [
+        "europol.europa.eu",
+        "interior.gob.es",
+        "citco.gob.es",
+        "terrorismanalysts.com"
       ]
     }
   ],
