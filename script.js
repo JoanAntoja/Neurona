@@ -216,9 +216,9 @@ function calcularFiabilitat(text) {
     det.push({ t: 'neg', ico: '🚨', l: "Emojis d'alarma", d: `${alarmEmoji} emojis d'alerta`, p: -8 });
   }
 
-  /* ── Fase 7: Detector de Números Alarmistes ─────────────────── *
-   * Detecta percentatges > 50% o xifres monetàries > 1000
-   * que apareguin sense context de font verificada.
+  /* ── Fase 7: Detector de Números Alarmistes (Regex) ─────────── *
+   * REGLA: Si % detectat > 50 sense font verificada → −30 pts
+   * REGLA: Si import monetari > 1.000€/$ sense font → −30 pts
    * ─────────────────────────────────────────────────────────────── */
   let numAlarm = false;
   // Percentatges: busca N% on N > 50
@@ -233,7 +233,7 @@ function calcularFiabilitat(text) {
   if (highPct.length > 0 || highMon.length > 0) {
     // Penalitza si NO hi ha indicadors de font (confiança)
     if (trustTotal === 0) {
-      score     -= 25;
+      score     -= 30;   // ← −30 pts (percentatge alarmista sense font)
       numAlarm   = true;
       const examples = [
         ...highPct.map(m => m[0]),
@@ -241,7 +241,7 @@ function calcularFiabilitat(text) {
       ].slice(0, 3).join(', ');
       det.push({ t: 'neg', ico: '💰',
                  l: 'Números alarmistes sense font',
-                 d: `Detectat: ${examples} — sense font verificada → −25 pts`, p: -25 });
+                 d: `Detectat: ${examples} — xifra sospitosa sense font verificada → −30 pts`, p: -30 });
     }
   }
 
@@ -259,15 +259,25 @@ function calcularFiabilitat(text) {
     det.push({ t: 'pos', ico: '🔬', l: 'Referència científica', d: 'Menciona estudis o investigacions', p: +8 });
   }
 
-  /* ── Cas "Jaume" — llindar d'inconclusió 45–55% ─────────────── */
+  /* ── Cas "Jaume" — sense paraules clau → fiabilitat 50 + avís ── *
+   * Si el càlcul final es queda entre 45–55% i no s'ha detectat
+   * cap paraula clau, és un text neutre (opinió, tema privat).
+   * La fiabilitat es fixa a 50 i es mostra el missatge d'avís.
+   * ─────────────────────────────────────────────────────────────── */
   const finalScore = Math.max(0, Math.min(100, Math.round(score)));
   let neutral = false;
-  if (finalScore >= 45 && finalScore <= 55 && detectedKW.length === 0) {
-    // Sense paraules clau i score al centre → inconclusió
+  if (detectedKW.length === 0 && verbsDetectats.length === 0) {
+    // Sense cap paraula clau del JSON → fiabilitat = 50 + missatge d'avís
     neutral = true;
     det.push({ t: 'neg', ico: 'ℹ️',
-               l: 'Anàlisi Neutral',
-               d: 'No es detecten indicadors de risc ni de veracitat', p: 0 });
+               l: 'Sense indicadors forenses',
+               d: 'Cap paraula clau detectada al JSON — fiabilitat fixada al 50%', p: 0 });
+  } else if (finalScore >= 45 && finalScore <= 55) {
+    // Paraules detectades però el càlcul es queda al centre → inconclusió
+    neutral = true;
+    det.push({ t: 'neg', ico: '⚖️',
+               l: 'Resultat Inconclusiu',
+               d: 'Indicadors equilibrats: no predomina risc ni fiabilitat', p: 0 });
   }
 
   /* ── Tema dominant (per categoria de risc) ───────────────────── */
@@ -457,8 +467,10 @@ function renderContext(temaData, to, score, neutral) {
 
   // Diagnòstic — inclou el cas "Jaume" (45-55% sense KW)
   let diag;
-  if (neutral && score >= 45 && score <= 55) {
+  if (neutral && detectedKW.length === 0) {
     diag = '⚠️ Resultat Inconclusiu: El text no conté prou indicadors ni de risc ni de veracitat oficial. Sembla una opinió personal o un tema privat.';
+  } else if (neutral) {
+    diag = '⚖️ Resultat Inconclusiu: els indicadors de risc i de fiabilitat s\'equilibren. Aplica verificació manual.';
   } else if (score <= 30) {
     diag = '⛔ Risc alt: múltiples indicadors de bulo confirmats.';
   } else if (score <= 50) {
