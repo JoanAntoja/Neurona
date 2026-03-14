@@ -478,7 +478,7 @@ function renderContext(temaData, to, score, neutral) {
   // Diagnòstic
   let diag;
   if (neutral && detectedKW.length === 0) {
-    diag = '⚠️ Anàlisi Inconclusa: No hi ha prou dades per validar el text.';
+    diag = '🔍 Text no identificat com a notícia: No s\'han detectat paraules clau informatives. Pot ser una conversa personal, una opinió o un tema privat. No és possible determinar si és un bulo o una veritat.';
   } else if (neutral) {
     diag = '⚖️ Resultat Inconclusiu: els indicadors de risc i de fiabilitat s\'equilibren. Aplica verificació manual.';
   } else if (score <= 30) {
