@@ -823,28 +823,103 @@ function showLoading(on) {
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 /* ═══════════════════════════════════════════════════════════════════
-   7. ANÀLISI PRINCIPAL
+   MOTOR HÍBRID — Hugging Face Inference API (gratuïta)
+   Model: valurank/distilroberta-base-fake-news-climate (multilingüe)
+   S'activa NOMÉS quan el resultat local és inconclusiu (40-60%).
+   No necessita clau API ni servidor intermediari.
+════════════════════════════════════════════════════════════════════ */
+const HF_MODEL = 'valurank/distilroberta-base-fake-news-climate';
+const HF_URL   = `https://api-inference.huggingface.co/models/${HF_MODEL}`;
+
+// Models alternatius de fallback si el primer no respon
+const HF_FALLBACK = [
+  'mrm8488/bert-tiny-finetuned-fake-news-classification',
+  'hamzab/cnn-fake-news-detection',
+];
+
+async function consultarHuggingFace(text) {
+  // Trunca el text a 400 caràcters — suficient per classificar
+  const input = text.slice(0, 400);
+
+  const models = [HF_MODEL, ...HF_FALLBACK];
+
+  for (const model of models) {
+    try {
+      const url  = `https://api-inference.huggingface.co/models/${model}`;
+      const resp = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ inputs: input }),
+      });
+
+      // Si el model encara s'està carregant (503), passa al següent
+      if (resp.status === 503) continue;
+      if (!resp.ok) continue;
+
+      const data = await resp.json();
+
+      // Hugging Face retorna [ [{label, score}, ...] ] o [{label, score}, ...]
+      const preds = Array.isArray(data[0]) ? data[0] : data;
+      if (!preds || !preds.length) continue;
+
+      // Busca l'etiqueta que indica "fake" o "LABEL_1" (depèn del model)
+      const fakeLabels = ['FAKE','fake','LABEL_1','misleading','unreliable','conspiracy'];
+      const realLabels = ['REAL','real','LABEL_0','reliable','credible','true'];
+
+      const fakeEntry = preds.find(p => fakeLabels.some(l => p.label?.toUpperCase().includes(l.toUpperCase())));
+      const realEntry = preds.find(p => realLabels.some(l => p.label?.toUpperCase().includes(l.toUpperCase())));
+
+      if (!fakeEntry && !realEntry) continue;
+
+      // Converteix la confiança del model a un ajust de la puntuació
+      // fakePct alt → text sospitós → baixa fiabilitat
+      const fakePct = fakeEntry ? fakeEntry.score : (realEntry ? 1 - realEntry.score : 0.5);
+      const conf    = Math.round(fakePct * 100);  // 0-100, on 100 = molt probablement fals
+
+      return {
+        ok:      true,
+        model,
+        fakePct: conf,       // probabilitat que sigui fals (0-100)
+        ajust:   Math.round((50 - conf) * 0.4),  // ajust al score: fake→negatiu, real→positiu
+      };
+    } catch (e) {
+      // Error de xarxa o CORS — prova el següent model
+      continue;
+    }
+  }
+
+  // Tots els models han fallat
+  return { ok: false };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   7. ANÀLISI PRINCIPAL — Motor Híbrid
+   Fase 1: Anàlisi local (sempre, instantani)
+   Fase 2: Hugging Face (només si resultat inconclusiu 40-60%)
 ════════════════════════════════════════════════════════════════════ */
 async function analyze() {
   const input = document.getElementById('msgInput');
   if (!input.value.trim()) { flashInput(); return; }
   if (!DB) { alert('La base de dades encara s\'està carregant. Torna a intentar-ho.'); return; }
 
-  // 1. Neteja total (resetUI) ABANS de fer res
+  const text = input.value.trim();
+
+  // ── FASE 1: Anàlisi local ───────────────────────────────────────
   resetUI();
   showLoading(true);
-  await delay(1900);
-  showLoading(false);
 
-  // 2. Càlcul — envoltat en try/catch perquè mai es quedi en blanc
-  const text = input.value.trim();
+  // Actualitza el missatge de la barra de càrrega — Fase 1
+  const loadTitle = document.querySelector('.loading-title');
+  if (loadTitle) loadTitle.textContent = 'ANALITZANT...';
+
+  await delay(1500);
+
   let result, to;
   try {
     result = calcularFiabilitat(text);
     to     = analitzarTo(text);
   } catch (err) {
     console.error('[NEURONA] Error al càlcul:', err);
-    // Fallback segur: mostra 50 amb missatge d'error
     result = {
       score: 50, det: [], detectedKW: [], bigramesDetectats: [], verbsDetectats: [],
       temaData: null, riskTotal: 0, trustTotal: 0, toxicityTotal: 0, neutral: true, numAlarm: false
@@ -853,6 +928,68 @@ async function analyze() {
     to = { label: 'Indeterminat', cls: 'chip-unk' };
   }
 
+  // ── FASE 2: Hugging Face (si resultat inconclusiu) ──────────────
+  const esInconclusiu = result.score >= 40 && result.score <= 60;
+
+  if (esInconclusiu) {
+    if (loadTitle) loadTitle.textContent = 'IA EXTERNA...';
+
+    // Canvia les barres per indicar una 2a fase
+    ['sb1','sb2','sb3','sb4'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.transition = 'none'; el.style.width = '0'; }
+    });
+    await delay(200);
+    ['sb1','sb2','sb3','sb4'].forEach((id, i) => {
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) { el.style.transition = 'width 1.2s ease'; el.style.width = ['45%','75%','90%','100%'][i]; }
+      }, i * 350);
+    });
+
+    const hf = await consultarHuggingFace(text);
+
+    if (hf.ok) {
+      // Aplica l'ajust al score
+      const scoreAnterior = result.score;
+      result.score = Math.max(5, Math.min(95, result.score + hf.ajust));
+
+      // Afegeix un chip explicatiu al detall
+      const ico    = hf.fakePct > 60 ? '🤖' : hf.fakePct < 40 ? '✅' : '🔄';
+      const label  = hf.fakePct > 60
+        ? `IA externa: probable desinformació (${hf.fakePct}% confiança)`
+        : hf.fakePct < 40
+          ? `IA externa: contingut probablement fiable (${100 - hf.fakePct}% confiança)`
+          : `IA externa: resultat inconclusiu (${hf.fakePct}% risc)`;
+
+      const ajustMostrat = result.score - scoreAnterior;
+      result.det.push({
+        t:   hf.fakePct > 50 ? 'neg' : 'pos',
+        ico,
+        l:   label,
+        d:   `Model: ${hf.model.split('/').pop()} · Ajust aplicat: ${ajustMostrat >= 0 ? '+' : ''}${ajustMostrat} pts`,
+        p:   ajustMostrat,
+      });
+
+      // Actualitza neutral si el nou score ja no és inconclusiu
+      if (result.score < 40 || result.score > 60) result.neutral = false;
+
+      console.info(`[NEURONA] HF ajust: ${scoreAnterior} → ${result.score} (fake: ${hf.fakePct}%)`);
+    } else {
+      // HF no disponible — avisa però no bloqueja
+      result.det.push({
+        t: 'neg', ico: '🌐',
+        l: 'IA externa no disponible',
+        d: 'El servei de Hugging Face no ha respost. Resultat basat únicament en anàlisi local.',
+        p: 0,
+      });
+      console.warn('[NEURONA] HF no disponible — mostrant resultat local');
+    }
+  }
+
+  showLoading(false);
+
+  // ── Finalitza i pinta ───────────────────────────────────────────
   scanCounter++;
   const scanId = scanCounter;
   const scanTs = new Date().toLocaleTimeString('ca-ES');
@@ -860,16 +997,13 @@ async function analyze() {
   document.getElementById('scanId').textContent = scanId;
   document.getElementById('scanTs').textContent = scanTs;
 
-  // 3. Desa per a l'informe
   lastResult = { ...result, text, to, scanId, scanTs };
 
-  // 4. Pinta (ordre important: gauge → heatmap → variables → context)
   renderGauge(result.score);
   renderHeatmap(result.detectedKW, result.bigramesDetectats, result.verbsDetectats);
   renderVariables(result.det);
   renderContext(result.temaData, to, result.score, result.neutral, result.detectedKW.length);
 
-  // 5. Mostra el dashboard
   const dash = document.getElementById('dashboard');
   dash.classList.add('visible');
   setTimeout(() => dash.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
