@@ -353,6 +353,11 @@ function clearAll(full = false) {
   document.getElementById('varCount').textContent  = '0';
   document.getElementById('scanId').textContent    = '0000';
   document.getElementById('scanTs').textContent    = '--:--:--';
+  // Amaga el panell de notícies
+  const newsPanel = document.getElementById('newsPanel');
+  if (newsPanel) { newsPanel.style.display = 'none'; }
+  const newsBody  = document.getElementById('newsBody');
+  if (newsBody)  { newsBody.innerHTML = ''; }
   // Reset gauge
   const fill   = document.getElementById('gaugeFill');
   const needle = document.getElementById('gaugeNeedle');
@@ -869,6 +874,114 @@ async function analyze() {
   const dash = document.getElementById('dashboard');
   dash.classList.add('visible');
   setTimeout(() => dash.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+
+  // Carrega notícies relacionades en paral·lel (no bloqueja el dashboard)
+  fetchNoticies(text);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   NOTÍCIES RELACIONADES — RSS de Google News via proxy CORS
+   Mostra titulars reals dins el dashboard sense obrir pestanyes.
+   Proxy: allorigins.win (gratuït, sense registre)
+   Fallback: obre Google News si el proxy no respon
+════════════════════════════════════════════════════════════════════ */
+async function fetchNoticies(text) {
+  const panel      = document.getElementById('newsPanel');
+  const body       = document.getElementById('newsBody');
+  const countEl    = document.getElementById('newsCount');
+
+  // Mostra el panell amb "Cercant..."
+  panel.style.display = 'block';
+  body.innerHTML = '<div class="news-loading">🔍 Cercant notícies relacionades...</div>';
+  countEl.textContent = '...';
+
+  // Extreu les 4 paraules més significatives del text
+  const kwText = extraureParaulesClau(text).slice(0, 4);
+  // Afegeix paraules de risc del JSON si n'hi ha
+  const riskKW = (lastResult?.detectedKW || [])
+    .filter(k => k.type === 'risk')
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2)
+    .map(k => k.word);
+
+  const terms = [...new Set([...kwText, ...riskKW])].slice(0, 5);
+  const query = terms.join(' ');
+
+  if (!query.trim()) {
+    body.innerHTML = '<div class="news-error">No s\'han pogut extreure paraules clau del text.</div>';
+    countEl.textContent = '0';
+    return;
+  }
+
+  // URL del RSS de Google News
+  const rssUrl   = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ca&gl=ES&ceid=ES:ca`;
+  // Proxy CORS gratuït
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
+  // URL de fallback per si el proxy falla
+  const fallbackUrl = `https://news.google.com/search?q=${encodeURIComponent(query)}&hl=ca&gl=ES`;
+
+  try {
+    const controller = new AbortController();
+    const timeout    = setTimeout(() => controller.abort(), 6000); // 6 segons màx
+
+    const resp = await fetch(proxyUrl, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    const data = await resp.json();
+    if (!data.contents) throw new Error('Resposta buida');
+
+    // Parseja l'XML del RSS
+    const parser  = new DOMParser();
+    const xmlDoc  = parser.parseFromString(data.contents, 'text/xml');
+    const items   = [...xmlDoc.querySelectorAll('item')].slice(0, 8);
+
+    if (!items.length) throw new Error('Sense resultats');
+
+    countEl.textContent = items.length;
+    body.innerHTML = '';
+
+    items.forEach(item => {
+      const title   = item.querySelector('title')?.textContent || 'Sense títol';
+      const link    = item.querySelector('link')?.textContent  || '#';
+      const pubDate = item.querySelector('pubDate')?.textContent || '';
+      const source  = item.querySelector('source')?.textContent
+                   || link.replace(/https?:\/\/(www\.)?/, '').split('/')[0]
+                   || 'Font desconeguda';
+
+      // Formata la data de manera llegible
+      let dateStr = '';
+      if (pubDate) {
+        try {
+          const d = new Date(pubDate);
+          dateStr = d.toLocaleDateString('ca-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch { dateStr = pubDate.slice(0, 16); }
+      }
+
+      const div = document.createElement('div');
+      div.className = 'news-item';
+      div.innerHTML = `
+        <a href="${link}" target="_blank" rel="noopener">${title}</a>
+        <div class="news-meta">
+          <span class="news-source">${source}</span>
+          ${dateStr ? `<span class="news-date">${dateStr}</span>` : ''}
+        </div>`;
+      body.appendChild(div);
+    });
+
+  } catch (err) {
+    // Proxy ha fallat — mostra missatge amb enllaç directe a Google News
+    console.warn('[NEURONA] RSS fetch error:', err.message);
+    countEl.textContent = '0';
+    body.innerHTML = `
+      <div class="news-error">
+        No s'ha pogut carregar les notícies automàticament.<br>
+        <a href="${fallbackUrl}" target="_blank" rel="noopener">
+          → Cerca "${query}" a Google News
+        </a>
+      </div>`;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
