@@ -228,33 +228,36 @@ function calcularFiabilitat(text) {
                d: `Més de 3 paraules de risc detectades (${riskWordCount}) — nota limitada al 60%`, p: 0 });
   }
 
-  /* ── Fase 7: Detector de Números Alarmistes (Regex) ─────────── *
-   * REGLA: Si % detectat > 50 sense font verificada → −30 pts
-   * REGLA: Si import monetari > 1.000€/$ sense font → −30 pts
+  /* ── Fase 7: Detector de Números ────────────────────────────── *
+   * REGLA 1: Només penalitza si el número porta % i és > 50.
+   * REGLA 2: Xifres monetàries (euros, $, €) → NO penalitzen,
+   *          però es detecten com a "Tema Econòmic" informatiu.
    * ─────────────────────────────────────────────────────────────── */
   let numAlarm = false;
-  // Percentatges: busca N% on N > 50
+
+  // Percentatges: NOMÉS busca N% on N > 50
   const pctMatches = [...text.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g)];
-  const highPct    = pctMatches.filter(m => parseFloat(m[1].replace(',','.')) > 50);
-  // Xifres monetàries: busca €N o $N o N€ o N$ on N > 1000
-  const monMatches = [...text.matchAll(/([€$])\s*(\d+(?:[.,]\d+)?)|(\d+(?:[.,]\d+)?)\s*([€$])/g)];
-  const highMon    = monMatches.filter(m => {
-    const val = parseFloat((m[2] || m[3] || '0').replace(',','.'));
-    return val > 1000;
+  const highPct    = pctMatches.filter(m => {
+    const v = parseFloat(m[1].replace(',','.'));
+    return !isNaN(v) && v > 50;
   });
-  if (highPct.length > 0 || highMon.length > 0) {
-    // Penalitza si NO hi ha indicadors de font (confiança)
-    if (trustTotal === 0) {
-      score     -= 30;   // ← −30 pts (percentatge alarmista sense font)
-      numAlarm   = true;
-      const examples = [
-        ...highPct.map(m => m[0]),
-        ...highMon.map(m => m[0]),
-      ].slice(0, 3).join(', ');
-      det.push({ t: 'neg', ico: '💰',
-                 l: 'Números alarmistes sense font',
-                 d: `Detectat: ${examples} — xifra sospitosa sense font verificada → −30 pts`, p: -30 });
-    }
+  if (highPct.length > 0 && trustTotal === 0) {
+    const examples = highPct.map(m => m[0]).slice(0,3).join(', ');
+    score    -= 20;
+    numAlarm  = true;
+    det.push({ t: 'neg', ico: '📊',
+               l: 'Percentatge elevat sense font',
+               d: `Detectat: ${examples} — xifra alta sense font verificada → −20 pts`, p: -20 });
+  }
+
+  // Xifres monetàries: detecta però NO penalitza — marca tema econòmic
+  const monRx = /\b(\d+(?:[.,]\d+)?)\s*(euros?|€|\$|dòlars?|dolares?|lliures?)\b|\b(euros?|€|\$|dòlars?|dolares?|lliures?)\s*(\d+(?:[.,]\d+)?)\b/gi;
+  const monMatches = [...text.matchAll(monRx)];
+  if (monMatches.length > 0) {
+    const exemples = monMatches.map(m => m[0]).slice(0,3).join(', ');
+    det.push({ t: 'neg', ico: '💶',
+               l: 'Xifres econòmiques detectades',
+               d: `Imports: ${exemples} — verificar la font d'aquestes dades`, p: 0 });
   }
 
   /* ── Fase 8: Indicadors de rigor addicionals (+) ────────────── */
@@ -275,15 +278,24 @@ function calcularFiabilitat(text) {
    * Si no s'ha detectat cap paraula (ni risc ni confiança),
    * la fiabilitat es fixa a 50 amb missatge d'avís específic.
    * ─────────────────────────────────────────────────────────────── */
+  // Guarda isNaN: si el càlcul ha fallat per qualsevol motiu, fixa a 50
+  if (isNaN(score) || !isFinite(score)) score = 50;
+
   let finalScore = Math.max(0, Math.min(100, Math.round(score)));
   let neutral = false;
-  if (detectedKW.length === 0 && verbsDetectats.length === 0) {
-    finalScore = 50;   // ← fixat a 50, no calculat
+
+  if (detectedKW.length === 0 && verbsDetectats.length === 0 && !numAlarm) {
+    // Cap paraula del JSON ni números alarmistes → text neutre
+    finalScore = 50;
     neutral    = true;
     det.push({ t: 'neg', ico: 'ℹ️',
                l: 'Anàlisi Inconclusa',
                d: 'No hi ha prou dades per validar el text', p: 0 });
-  } else if (finalScore >= 45 && finalScore <= 55) {
+  } else if (isNaN(finalScore) || !isFinite(finalScore)) {
+    // Seguretat extra: si malgrat tot el valor és inválid
+    finalScore = 50;
+    neutral    = true;
+  } else if (finalScore >= 45 && finalScore <= 55 && detectedKW.length > 0) {
     neutral = true;
     det.push({ t: 'neg', ico: '⚖️',
                l: 'Resultat Inconclusiu',
