@@ -32,6 +32,41 @@ function trobarLexema(textNorm, lexema) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   RESET UI — alias públic de clearAll(false)
+   Cridada des de analyze() i des del botó "NETEJAR"
+════════════════════════════════════════════════════════════════════ */
+function resetUI() { clearAll(false); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RELACIÓ DE CONCEPTES — multiplicador x1.5
+   Si un mateix paràgraf conté paraules de dues categories
+   "emocionals" (por, urgència, emoció, pseudociència) combinades
+   amb qualsevol altra categoria de contingut, la penalització
+   total de toxicitat es multiplica x1.5.
+   Retorna: { active: bool, cats: string[], penalty: number }
+════════════════════════════════════════════════════════════════════ */
+const EMOTIONAL_CATS = new Set([
+  'TOPIC_EMOCIO', 'TOPIC_URGENCIA', 'TOPIC_PSEUDOCIENCIA', 'TOPIC_INSTITUCIONS',
+  'TOPIC_CONSPIRAC',
+]);
+
+function detectarRelacioConceptes(temaHits, toxicityTotal) {
+  const ids = Object.keys(temaHits);
+  if (ids.length < 2) return { active: false, cats: [], penalty: 0 };
+
+  // Comprova si hi ha almenys una cat emocional + una cat de contingut
+  const hasEmotional = ids.some(id => EMOTIONAL_CATS.has(id));
+  const hasContent   = ids.some(id => !EMOTIONAL_CATS.has(id));
+
+  if (!hasEmotional || !hasContent) return { active: false, cats: [], penalty: 0 };
+
+  // Penalty = 50% del toxicityTotal arrodonit (multiplicador x1.5 sobre base)
+  const extraPenalty = Math.min(40, Math.round(toxicityTotal * 0.5));
+  const cats = ids.map(id => temaHits[id].topic.nom);
+  return { active: true, cats, penalty: extraPenalty };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    1. MOTOR PRINCIPAL — calcularFiabilitat(text)
    Retorna: { score, det, detectedKW, bigramesDetectats,
                verbsDetectats, temaData, toxicityTotal }
@@ -98,6 +133,26 @@ function calcularFiabilitat(text) {
     }
   }
 
+  /* ── Penalització per densitat (text curt + toxicitat alta) ─── *
+   * Fórmula exponencial: si el text té < 80 paraules però
+   * toxicityTotal > 8, la relació paraules/toxicitat és sospitosa.
+   * Penalty = toxicityTotal² / wordCount   (cap a −40 pts màx)
+   * ─────────────────────────────────────────────────────────────── */
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  if (wordCount > 0 && wordCount < 80 && toxicityTotal >= 8) {
+    const densityRatio  = toxicityTotal / wordCount;         // tox per paraula
+    const densityPenalty = Math.min(40, Math.round(densityRatio * densityRatio * 6));
+    if (densityPenalty >= 3) {
+      score -= densityPenalty;
+      det.push({
+        t: 'neg', ico: '📐',
+        l: `Alta densitat de risc`,
+        d: `Text curt (${wordCount} paraules) amb toxicitat alta → penalització exponencial`,
+        p: -densityPenalty,
+      });
+    }
+  }
+
   /* ── Fase 2: Verbs d'atac transversals ──────────────────────── */
   let verbPenalty = 0;
   for (const verb of DB.verbs_atac) {
@@ -134,28 +189,46 @@ function calcularFiabilitat(text) {
     }
   }
 
+  /* ── Fase 3b: Relació de Conceptes (multiplicador x1.5) ────────
+   * Si detectem categories emocionals + categories de contingut
+   * en el mateix text, apliquem un 50% extra sobre la toxicitat.
+   * ─────────────────────────────────────────────────────────────── */
+  const relacio = detectarRelacioConceptes(temaHits, toxicityTotal);
+  if (relacio.active && relacio.penalty > 0) {
+    score -= relacio.penalty;
+    det.push({
+      t: 'neg', ico: '🔗',
+      l: `Relació de conceptes (×1.5)`,
+      d: `Combinació d'emocionalitat + contingut: ${relacio.cats.slice(0,3).join(' + ')}`,
+      p: -relacio.penalty,
+    });
+  }
+
   /* ── Fase 4: Variables estructurals de text ─────────────────── */
-  // T1. Majúscules sostingudes (≥20%)
+  // T1. Majúscules sostingudes (≥20%) → −15% del score actual
   const alfa   = text.replace(/[^a-zA-ZàáèéíïòóúüçÀÁÈÉÍÏÒÓÚÜÇ]/g, '');
   const majPct = alfa.length > 10
     ? alfa.replace(/[a-zàáèéíïòóúüç]/g, '').length / alfa.length
     : 0;
   if (majPct >= 0.20) {
-    const p = majPct >= 0.50 ? -30 : -15;
+    // Penalització proporcional: −15% del score actual (mai menys de −15 ni més de −30)
+    const rawP = Math.round(score * 0.15);
+    const p    = -(majPct >= 0.50 ? Math.min(rawP * 2, 30) : Math.max(rawP, 15));
     score += p;
     det.push({
       t: 'neg', ico: '🔠',
       l: 'Majúscules excessives',
-      d: `${Math.round(majPct * 100)}% del text en majúscules`,
+      d: `${Math.round(majPct * 100)}% del text en majúscules → −15% fiabilitat automàtic`,
       p,
     });
   }
 
-  // T2. Exclamacions excessives (≥3)
+  // T2. Exclamacions excessives (≥3) → −15% del score actual
   const excl = (text.match(/!/g) || []).length;
   if (excl >= 3) {
-    score -= 15;
-    det.push({ t: 'neg', ico: '❗', l: 'Exclamacions excessives', d: `${excl} signes d'exclamació`, p: -15 });
+    const p = -(Math.max(Math.round(score * 0.15), 15));
+    score += p;
+    det.push({ t: 'neg', ico: '❗', l: 'Exclamacions excessives', d: `${excl} signes d'exclamació → −15% fiabilitat automàtic`, p });
   }
 
   // T3. Crida a l'acció buida
@@ -187,15 +260,15 @@ function calcularFiabilitat(text) {
     det.push({ t: 'pos', ico: '🔬', l: 'Referència científica', d: 'Menciona estudis o investigacions', p: +10 });
   }
 
-  /* ── Lògica de buit: sense indicadors → 50 (NEUTRAL) ────────── */
+  /* ── Lògica de neutralitat: cap indicador → exactament 50% ──── */
   let neutral = false;
   if (detectedKW.length === 0 && verbsDetectats.length === 0 && det.filter(d => d.t === 'neg').length === 0) {
     score   = 50;
     neutral = true;
     det.push({
       t: 'neg', ico: 'ℹ️',
-      l: 'Sense indicadors suficients',
-      d: 'Text sense paraules clau forenses identificables',
+      l: 'Anàlisi Neutral',
+      d: 'No es detecten indicadors de risc',
       p: 0,
     });
   }
@@ -412,7 +485,10 @@ function renderContext(temaData, to, score, neutral) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   4. CERCA A GOOGLE — top 3 paraules per Toxicity Score
+   4. CERCA A GOOGLE — Motor intel·ligent
+   Selecciona les 2 paraules amb MÉS PES EMOCIONAL (toxicity score)
+   i construeix: [KW1] [KW2] desmentido fact-check
+   amb filtre site: als fact-checkers oficials
 ════════════════════════════════════════════════════════════════════ */
 function verificarGoogle() {
   const text = document.getElementById('msgInput').value.trim();
@@ -420,25 +496,31 @@ function verificarGoogle() {
 
   let topTerms = [];
 
-  if (lastResult && lastResult.detectedKW.length >= 2) {
+  // Top 2 per toxicity score (les més "emocionalment carregades")
+  if (lastResult && lastResult.detectedKW.length >= 1) {
     const seen = new Set();
     const uniq = lastResult.detectedKW.filter(kw => {
       if (seen.has(kw.word)) return false;
       seen.add(kw.word); return true;
     });
-    topTerms = uniq.sort((a, b) => b.score - a.score).slice(0, 3).map(k => k.word);
+    topTerms = uniq
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2)
+      .map(k => k.word);
   }
 
-  // Fallback: 5 paraules més llargues del text
-  if (topTerms.length < 2) {
+  // Fallback: 2 paraules més llargues del text (≥5 caràcters)
+  if (topTerms.length < 1) {
     topTerms = [...new Set(
       text.replace(/[^\w\sàáèéíïòóúüç]/g, ' ').split(/\s+/)
           .map(w => w.trim()).filter(w => w.length >= 5)
-    )].sort((a, b) => b.length - a.length).slice(0, 5);
+    )].sort((a, b) => b.length - a.length).slice(0, 2);
   }
 
-  const sites = 'site:maldita.es OR site:newtral.es OR site:verificat.cat OR site:afpfactual.com';
-  const q     = encodeURIComponent(topTerms.join(' ') + ' ' + sites);
+  // Construeix query: [KW1] [KW2] desmentido fact-check site:...
+  const factTerms = 'desmentido fact-check';
+  const sites     = 'site:maldita.es OR site:newtral.es OR site:verificat.cat OR site:afpfactual.com';
+  const q         = encodeURIComponent(`${topTerms.join(' ')} ${factTerms} ${sites}`);
   window.open('https://www.google.com/search?q=' + q, '_blank', 'noopener');
 }
 
@@ -652,8 +734,8 @@ async function analyze() {
   if (!input.value.trim()) { flashInput(); return; }
   if (!DB) { alert('La base de dades encara s\'està carregant. Torna a intentar-ho.'); return; }
 
-  // 1. Neteja total del resultat anterior ABANS de fer res
-  clearAll(false);
+  // 1. Neteja total (resetUI) ABANS de fer res
+  resetUI();
   showLoading(true);
   await delay(1900);
   showLoading(false);
