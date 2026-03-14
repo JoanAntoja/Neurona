@@ -460,20 +460,31 @@ function renderContext(temaData, to, score, neutral) {
     : `<span class="ceba-chip chip-unk">⬡ General</span>`;
 
   let diag;
-  if (neutral)      diag = 'ℹ️ Text sense indicadors forenses suficients. Aplicar verificació manual.';
+  if (neutral)          diag = 'ℹ️ Anàlisi Neutral: No es detecten indicadors de risc.';
   else if (score <= 30) diag = '⛔ Risc alt: múltiples indicadors de bulo confirmats.';
   else if (score <= 50) diag = '⚠️ Risc moderat: patrons sospitosos. Verificació urgent.';
   else if (score <= 70) diag = '🔶 Inconclusiu: alguns indicadors dubtosos.';
-  else              diag = '✅ Cap indicador crític detectat.';
+  else                  diag = '✅ Cap indicador crític detectat.';
 
-  const fonts = (temaData ? temaData.fonts : ['Maldita.es', 'Newtral.es', 'Verificat.cat'])
-    .map(f => `<a href="#" class="src-link" onclick="return false">${f}</a>`).join('');
+  // Fonts: preferim fonts_fiables (URLs) si existeixen, sinó fonts (labels)
+  const fontsArr   = temaData?.fonts_fiables || temaData?.fonts || ['maldita.es', 'newtral.es', 'verificat.cat'];
+  const fontsHtml  = fontsArr.map(f => {
+    const isUrl = f.includes('.');
+    const href  = isUrl ? `https://${f}` : '#';
+    const label = isUrl ? f.replace(/^www\./, '') : f;
+    return `<a href="${href}" target="_blank" rel="noopener" class="src-link">${label}</a>`;
+  }).join('');
+
+  // Missatge de recomanació per a la categoria dominant
+  const recomHtml = temaData
+    ? `<div class="recom-notice">Recomanem contrastar a: ${fontsArr.slice(0,3).map(f => `<strong>${f.replace(/^www\./,'')}</strong>`).join(', ')}</div>`
+    : '';
 
   const rows = [
     ['CATEGORIA',   catHtml],
     ['TO DETECTAT', `<span class="ceba-chip ${to.cls}">${to.label}</span>`],
     ['DIAGNÒSTIC',  diag],
-    ['FONTS',       `<div class="ceba-sources">${fonts}</div>`],
+    ['FONTS',       `<div class="ceba-sources">${fontsHtml}</div>`],
   ];
 
   rows.forEach(([key, val]) => {
@@ -482,21 +493,27 @@ function renderContext(temaData, to, score, neutral) {
     row.innerHTML = `<div class="ceba-key">${key}</div><div class="ceba-val">${val}</div>`;
     grid.appendChild(row);
   });
+
+  // Bloc de recomanació (sempre al final del panel)
+  if (recomHtml) {
+    const div = document.createElement('div');
+    div.innerHTML = recomHtml;
+    grid.appendChild(div.firstElementChild);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   4. CERCA A GOOGLE — Motor intel·ligent
-   Selecciona les 2 paraules amb MÉS PES EMOCIONAL (toxicity score)
-   i construeix: [KW1] [KW2] desmentido fact-check
-   amb filtre site: als fact-checkers oficials
+   4. CERCA DE CONTRAST Intel·ligent
+   - Top 2 KW per toxicity score del text analitzat
+   - site: construït amb les fonts_fiables de la categoria dominant
+   - Query: [KW1] [KW2] desmentido fact-check site:A OR site:B OR ...
 ════════════════════════════════════════════════════════════════════ */
 function verificarGoogle() {
   const text = document.getElementById('msgInput').value.trim();
   if (!text) { flashInput(); return; }
 
+  // ── Top 2 paraules per toxicity score ──────────────────────────
   let topTerms = [];
-
-  // Top 2 per toxicity score (les més "emocionalment carregades")
   if (lastResult && lastResult.detectedKW.length >= 1) {
     const seen = new Set();
     const uniq = lastResult.detectedKW.filter(kw => {
@@ -508,8 +525,6 @@ function verificarGoogle() {
       .slice(0, 2)
       .map(k => k.word);
   }
-
-  // Fallback: 2 paraules més llargues del text (≥5 caràcters)
   if (topTerms.length < 1) {
     topTerms = [...new Set(
       text.replace(/[^\w\sàáèéíïòóúüç]/g, ' ').split(/\s+/)
@@ -517,10 +532,20 @@ function verificarGoogle() {
     )].sort((a, b) => b.length - a.length).slice(0, 2);
   }
 
-  // Construeix query: [KW1] [KW2] desmentido fact-check site:...
-  const factTerms = 'desmentido fact-check';
-  const sites     = 'site:maldita.es OR site:newtral.es OR site:verificat.cat OR site:afpfactual.com';
-  const q         = encodeURIComponent(`${topTerms.join(' ')} ${factTerms} ${sites}`);
+  // ── Site operators des de fonts_fiables de la categoria dominant ─
+  let siteOps;
+  const temaData = lastResult?.temaData;
+  if (temaData?.fonts_fiables?.length) {
+    siteOps = temaData.fonts_fiables
+      .slice(0, 4)
+      .map(u => `site:${u}`)
+      .join(' OR ');
+  } else {
+    // Fallback genèric de fact-checkers
+    siteOps = 'site:maldita.es OR site:newtral.es OR site:verificat.cat OR site:afpfactual.com';
+  }
+
+  const q = encodeURIComponent(`${topTerms.join(' ')} desmentido fact-check ${siteOps}`);
   window.open('https://www.google.com/search?q=' + q, '_blank', 'noopener');
 }
 
